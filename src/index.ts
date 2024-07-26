@@ -13,7 +13,12 @@ const app =  express()
 
 app.use(express.json())
 
-app.use(cors())
+const corsOptions = {
+    origin: '*',
+    optionsSuccessStatus: 200,
+};
+
+app.use(cors(corsOptions))
 
 app.use('/api/v1', apiV1)
 
