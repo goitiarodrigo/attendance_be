@@ -13,8 +13,16 @@ const app =  express()
 
 app.use(express.json())
 
+const allowedOrigins = ['https://espartanitos.netlify.app', 'http://localhost:5173'];
+
 const corsOptions = {
-    origin: ['*'],
+    origin: function (origin, callback) {
+        if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     optionsSuccessStatus: 200,
 };
 
