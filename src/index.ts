@@ -44,10 +44,16 @@ apiV1.get('/attendance', async (req: Request, res: Response) => {
         }
 
         const filteredData = data.map((student) => {
-            const filteredAttendance = Array.from(student.attendance.entries())
-                .filter(([date]) => date.split("/")[1] == month)
-                .reduce((obj: any, [key, value]) => {
-                    obj[key] = value;
+            // Convertir el Map a un objeto simple
+            const attendanceObject = Object.fromEntries(student.attendance);
+
+            const filteredAttendance = Object.entries(attendanceObject)
+                .filter(([date]) => date.split("/")[1] === month)
+                .reduce((obj: any, [date, value]) => {
+                    obj[date] = {
+                        status: value.status,
+                        type: value.type || "-"
+                    };
                     return obj;
                 }, {});
 
@@ -56,37 +62,42 @@ apiV1.get('/attendance', async (req: Request, res: Response) => {
                 attendance: filteredAttendance,
             };
         }).filter(student => Object.keys(student.attendance).length > 0);
-    
+
         res.json(filteredData);
-    } catch (error) {
+    } catch (error: any) {
+        console.error(error.message);
         res.status(500).json({ message: 'Error fetching attendance data' });
     }
 });
 
 apiV1.post('/attendance', async (req: Request, res: Response) => {
-    const { newAttendance } = req.body;
+    const { newAttendance, type } = req.body;
 
-    if (!newAttendance || !Array.isArray(newAttendance)) {
-        return res.status(400).json({ message: 'Invalid data format' });
+    if (!newAttendance || !Array.isArray(newAttendance) || !type) {
+        return res.status(400).json({ message: 'Invalid data format or type missing' });
     }
 
     try {
         for (const entry of newAttendance) {
             const name = Object.keys(entry)[0];
             const attendance = entry[name];
-    
+
             if (!name || !attendance) {
-            return res.status(400).json({ message: 'Name and attendance are required for each entry' });
+                return res.status(400).json({ message: 'Name and attendance are required for each entry' });
             }
-    
+
+            const date = Object.keys(attendance)[0];
+            const status = Object.values(attendance)[0];
+
             await AttendanceModel.updateOne(
                 { name },
-                { $set: { [`attendance.${Object.keys(attendance)[0]}`]: Object.values(attendance)[0] } },
+                { $set: { [`attendance.${date}`]: { status, type } } },
                 { upsert: true }
             );
         }
         res.status(201).json({ message: 'Attendance data added successfully' });
-    } catch (error) {
+    } catch (error: any) {
+        console.log(error.message)
         res.status(500).json({ message: 'Error adding attendance data' });
     }
 });
